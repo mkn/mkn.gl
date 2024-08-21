@@ -1,0 +1,33 @@
+#! clean build test run -tOqp rocm -x res/mkn/hipcc -W
+
+name: mkn.gpu
+parent: all
+
+property:
+  gl.glew.version: 2.2.0
+
+profile:
+- name: inc
+  inc: inc
+
+- name: all
+  parent: inc
+  if_arg:
+    bsd: -DMACOSX
+    nix: -D_GLFW_X11 -D_GLFW_GLX -D_GLFW_HAS_DLOPEN
+    win: -D_GLFW_WIN32 -D_GLFW_WGL
+    win_shared: -D_GLFW_BUILD_DLL
+  arg: -D_GLFW_USE_OPENGL=1
+  src:
+    dep/glfw/g/src
+    dep/glew/glew-${gl.glew.version}/src/glew.c
+  lib: GL
+
+- name: dep_get
+  dep:
+    gl.gl&dep/gl
+    gl.glu&dep/glu
+    gl.glew&dep/glew
+    gl.glfw&dep/glfw
+    gl.glm&dep/glm
+
