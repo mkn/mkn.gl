@@ -14,8 +14,8 @@ jobs:
       with:
         submodules: true
 
-    # sudo apt update && sudo apt install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
     - run: |
+        sudo apt update && sudo apt install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
         curl -Lo mkn https://github.com/mkn/mkn/releases/download/latest/mkn_nix
         chmod +x mkn
         PATH="$PWD:$PATH" ./mkn.sh

@@ -28,4 +28,3 @@ profile:
     gl.glew&dep/glew
     gl.glfw&dep/glfw
     gl.glm&dep/glm
-
