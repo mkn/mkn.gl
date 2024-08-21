@@ -3,9 +3,6 @@
 name: mkn.gpu
 parent: all
 
-property:
-  gl.glew.version: 2.2.0
-
 profile:
 - name: inc
   inc: inc
@@ -16,11 +13,12 @@ profile:
     bsd: -DMACOSX
     nix: -D_GLFW_X11 -D_GLFW_GLX -D_GLFW_HAS_DLOPEN
     win: -D_GLFW_WIN32 -D_GLFW_WGL
-    win_shared: -D_GLFW_BUILD_DLL
+    win_shared: -D_GLFW_BUILD_DLL -DGLEW_BUILD -DGLEWAPI
+    win_static: -DGLEW_STATIC
   arg: -D_GLFW_USE_OPENGL=1
   src:
     dep/glfw/g/src
-    dep/glew/glew-${gl.glew.version}/src/glew.c
+    dep/glew/g/src/glew.c
   lib: GL
 
 - name: dep_get
