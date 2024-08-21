@@ -1,0 +1,22 @@
+
+name: Build on Ubuntu
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    name: Ubuntu
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: true
+
+    # sudo apt update && sudo apt install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev
+    - run: |
+        curl -Lo mkn https://github.com/mkn/mkn/releases/download/latest/mkn_nix
+        chmod +x mkn
+        PATH="$PWD:$PATH" ./mkn.sh
+        ./mkn clean build -dtOa -fPIC -p all
