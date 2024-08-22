@@ -12,4 +12,4 @@ do_incs() {
     cp -r dep/glm/g/glm inc/
 }
 
-[ ! -d "inc" ] && do_incs
+[ ! -d "inc/GL" ] && do_incs
