@@ -8,6 +8,7 @@ profile:
   inc: inc
 
 - name: all
+  dep: mkn.kul
   parent: inc
   if_arg:
     bsd: -DMACOSX
