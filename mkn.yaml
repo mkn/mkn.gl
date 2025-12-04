@@ -1,6 +1,6 @@
-#! clean build test run -tOqp rocm -x res/mkn/hipcc -W
+#! clean build -dtOa -fPIC -p all
 
-name: mkn.gpu
+name: mkn.gl
 parent: all
 
 profile:
@@ -29,3 +29,4 @@ profile:
     gl.glew&dep/glew
     gl.glfw&dep/glfw
     gl.glm&dep/glm
+    gl.gli&dep/gli

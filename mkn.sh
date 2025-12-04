@@ -8,8 +8,9 @@ do_incs() {
     cp -r dep/gl/inc/GL/* inc/GL/
     cp -r dep/glew/g/include/GL/* inc/GL/
     cp -r dep/glu/g/include/GL/* inc/GL
-    cp -r dep/glfw/g/include/* inc/
+    cp -r dep/glfw/g/include/* inc
     cp -r dep/glm/g/glm inc/
+    cp -r dep/gli/g/gli inc/
 }
 
 [ ! -d "inc/GL" ] && do_incs
