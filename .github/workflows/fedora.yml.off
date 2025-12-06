@@ -1,0 +1,24 @@
+
+name: Fedora
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+
+jobs:
+  build:
+    name: Fedora
+    runs-on: ubuntu-latest
+    container: fedora:43
+    steps:
+    - uses: actions/checkout@v6
+
+    - run: |
+        sudo dnf install -y libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel
+        curl -Lo mkn https://github.com/mkn/mkn/releases/download/latest/mkn_nix
+        chmod +x mkn
+        PATH="$PWD:$PATH" ./mkn.sh
+        ./mkn clean build -dtOa -fPIC -p all
