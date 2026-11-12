@@ -2,16 +2,8 @@
 #define _MKN_GL_FW_HPP_
 
 #include <GLFW/glfw3.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
-#include <vector>
-#include <cstring>
-#include <fstream>
-#include <sstream>
-#include <optional>
-
-#include "mkn/kul/except.hpp"
+#include <stdexcept>
 
 namespace mkn::gl::fw {
 

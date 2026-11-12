@@ -22,6 +22,12 @@ profile:
     dep/glew/g/src/glew.c
   lib: GL
 
+# first person camera over a cube, see ex/
+- name: example
+  parent: all
+  inc: ex
+  main: ex/cube.cpp
+
 - name: dep_get
   dep:
     gl.gl&dep/gl

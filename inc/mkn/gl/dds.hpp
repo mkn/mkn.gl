@@ -3,58 +3,40 @@
 
 #include <GL/glew.h>
 
-#include <vector>
+#include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <sstream>
-#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 namespace mkn::gl::dds {
 
-GLuint inline static load(const char *imagepath) {
-  auto constexpr static FOURCC_DXT1 = 0x31545844;  // Equivalent to "DXT1" in ASCII
-  auto constexpr static FOURCC_DXT3 = 0x33545844;  // Equivalent to "DXT3" in ASCII
-  auto constexpr static FOURCC_DXT5 = 0x35545844;  // Equivalent to "DXT5" in ASCII
+// loads a DXT1/3/5 compressed DDS file with its mipmaps into a new 2D texture,
+// throws if the file can't be read or isn't a supported DDS
+GLuint inline static load(std::string const& imagepath) {
+  auto constexpr static FOURCC_DXT1 = 0x31545844;  // "DXT1" in ASCII
+  auto constexpr static FOURCC_DXT3 = 0x33545844;  // "DXT3" in ASCII
+  auto constexpr static FOURCC_DXT5 = 0x35545844;  // "DXT5" in ASCII
 
-  unsigned char header[124];
+  std::ifstream file(imagepath, std::ios::binary);
+  if (!file) throw std::runtime_error("cannot open DDS file: " + imagepath);
 
-  FILE *fp = fopen(imagepath, "rb");
-  if (fp == NULL) {
-    printf(
-        "%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n",
-        imagepath);
-    getchar();
-    return 0;
-  }
-
-  /* verify the type of file */
   char filecode[4];
-  fread(filecode, 1, 4, fp);
-  if (strncmp(filecode, "DDS ", 4) != 0) {
-    fclose(fp);
-    return 0;
-  }
+  unsigned char header[124];
+  if (!file.read(filecode, 4) || std::strncmp(filecode, "DDS ", 4) != 0 ||
+      !file.read(reinterpret_cast<char*>(header), sizeof(header)))
+    throw std::runtime_error("not a DDS file: " + imagepath);
 
-  /* get the surface desc */
-  fread(&header, 124, 1, fp);
+  auto const u32 = [&](std::size_t const at) {
+    std::uint32_t v;
+    std::memcpy(&v, header + at, sizeof(v));
+    return v;
+  };
+  auto height = u32(8), width = u32(12);
+  auto const linearSize = u32(16), mipMapCount = u32(24), fourCC = u32(80);
 
-  unsigned int height = *(unsigned int *)&(header[8]);
-  unsigned int width = *(unsigned int *)&(header[12]);
-  unsigned int linearSize = *(unsigned int *)&(header[16]);
-  unsigned int mipMapCount = *(unsigned int *)&(header[24]);
-  unsigned int fourCC = *(unsigned int *)&(header[80]);
-
-  unsigned char *buffer;
-  unsigned int bufsize;
-  /* how big is it going to be including all mipmaps? */
-  bufsize = mipMapCount > 1 ? linearSize * 2 : linearSize;
-  buffer = (unsigned char *)malloc(bufsize * sizeof(unsigned char));
-  fread(buffer, 1, bufsize, fp);
-  /* close the file pointer */
-  fclose(fp);
-
-  unsigned int components = (fourCC == FOURCC_DXT1) ? 3 : 4;
-  unsigned int format;
+  GLenum format;
   switch (fourCC) {
     case FOURCC_DXT1:
       format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
@@ -66,41 +48,33 @@ GLuint inline static load(const char *imagepath) {
       format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
       break;
     default:
-      free(buffer);
-      return 0;
+      throw std::runtime_error("unsupported DDS format, DXT1/3/5 only: " + imagepath);
   }
 
-  // Create one OpenGL texture
+  // all mipmaps
+  std::vector<unsigned char> buffer(mipMapCount > 1 ? linearSize * 2 : linearSize);
+  file.read(reinterpret_cast<char*>(buffer.data()), static_cast<std::streamsize>(buffer.size()));
+
   GLuint textureID;
   glGenTextures(1, &textureID);
-
-  // "Bind" the newly created texture : all future texture functions will modify this texture
   glBindTexture(GL_TEXTURE_2D, textureID);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-  unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
-  unsigned int offset = 0;
-
-  /* load the mipmaps */
-  for (unsigned int level = 0; level < mipMapCount && (width || height); ++level) {
-    unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
-    glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height, 0, size, buffer + offset);
-
+  std::uint32_t const blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
+  std::size_t offset = 0;
+  for (std::uint32_t level = 0; level < mipMapCount && (width || height); ++level) {
+    std::uint32_t const size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
+    if (offset + size > buffer.size()) break;  // truncated file
+    glCompressedTexImage2D(GL_TEXTURE_2D, static_cast<GLint>(level), format,
+                           static_cast<GLsizei>(width), static_cast<GLsizei>(height), 0,
+                           static_cast<GLsizei>(size), buffer.data() + offset);
     offset += size;
-    width /= 2;
-    height /= 2;
-
-    // Deal with Non-Power-Of-Two textures. This code is not included in the webpage to reduce
-    // clutter.
-    if (width < 1) width = 1;
-    if (height < 1) height = 1;
+    width = width > 1 ? width / 2 : 1;  // non power of two textures
+    height = height > 1 ? height / 2 : 1;
   }
-
-  free(buffer);
-
   return textureID;
 }
 
 }  // namespace mkn::gl::dds
 
-#endif  //_MKN_GL_DDS_HPP_
+#endif  // _MKN_GL_DDS_HPP_

@@ -22,3 +22,4 @@ jobs:
         chmod +x mkn
         PATH="$PWD:$PATH" ./mkn.sh
         ./mkn clean build -dtOa -fPIC -p all
+        ./mkn clean build -dtOp example -a -fPIC -j '{"cpp": "-std=c++20"}'

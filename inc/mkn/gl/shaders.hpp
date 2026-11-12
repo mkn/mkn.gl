@@ -3,107 +3,82 @@
 
 #include <GL/glew.h>
 
-#include <vector>
 #include <fstream>
-#include <sstream>
+#include <initializer_list>
 #include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
 
 namespace mkn::gl::shaders {
 
-std::optional<std::string> file_to_string(auto const &file_path) {
-  std::string file_contents;
+std::optional<std::string> static inline file_to_string(std::string const& file_path) {
   std::ifstream ifs(file_path, std::ios::in);
-  if (ifs.is_open()) {
-    std::stringstream sstr;
-    sstr << ifs.rdbuf();
-    file_contents = sstr.str();
-    ifs.close();
-    return file_contents;
-  }
-  printf(
-      "Impossible to open %s. Are you in the right directory ? Don't "
-      "forget to read the FAQ !\n",
-      file_path);
-  getchar();
-
-  return std::nullopt;
+  if (!ifs.is_open()) return std::nullopt;
+  std::stringstream sstr;
+  sstr << ifs.rdbuf();
+  return sstr.str();
 }
 
-auto static inline load(char const *vertex_file_path, char const *fragment_file_path) {
-  decltype(glCreateProgram()) ret = 0;
-  // Create the shaders
-  auto VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
-  auto FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
-
-  auto optional_vtx = file_to_string(vertex_file_path);
-  if (!optional_vtx) return ret;
-  auto VertexShaderCode = *optional_vtx;
-
-  auto optional_fragement = file_to_string(fragment_file_path);
-  auto FragmentShaderCode = optional_fragement ? *optional_fragement : "";
-
-  auto Result = GL_FALSE;
-  int InfoLogLength;
-
-  // Compile Vertex Shader
-  printf("Compiling shader : %s\n", vertex_file_path);
-  char const *VertexSourcePointer = VertexShaderCode.c_str();
-  glShaderSource(VertexShaderID, 1, &VertexSourcePointer, NULL);
-  glCompileShader(VertexShaderID);
-
-  // Check Vertex Shader
-  glGetShaderiv(VertexShaderID, GL_COMPILE_STATUS, &Result);
-  glGetShaderiv(VertexShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-  if (InfoLogLength > 0) {
-    std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
-    glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
-    printf("%s\n", &VertexShaderErrorMessage[0]);
-  }
-
-  // Compile Fragment Shader
-  printf("Compiling shader : %s\n", fragment_file_path);
-  char const *FragmentSourcePointer = FragmentShaderCode.c_str();
-  glShaderSource(FragmentShaderID, 1, &FragmentSourcePointer, NULL);
-  glCompileShader(FragmentShaderID);
-
-  // Check Fragment Shader
-  glGetShaderiv(FragmentShaderID, GL_COMPILE_STATUS, &Result);
-  glGetShaderiv(FragmentShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-  if (InfoLogLength > 0) {
-    std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
-    glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-    printf("%s\n", &FragmentShaderErrorMessage[0]);
-  }
-
-  // Link the program
-  printf("Linking program\n");
-  auto ProgramID = glCreateProgram();
-  glAttachShader(ProgramID, VertexShaderID);
-  glAttachShader(ProgramID, FragmentShaderID);
-  glLinkProgram(ProgramID);
-
-  // Check the program
-  glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
-  glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-  if (InfoLogLength > 0) {
-    std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
-    glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-    printf("%s\n", &ProgramErrorMessage[0]);
-  }
-
-  glDetachShader(ProgramID, VertexShaderID);
-  glDetachShader(ProgramID, FragmentShaderID);
-
-  glDeleteShader(VertexShaderID);
-  glDeleteShader(FragmentShaderID);
-
-  return ProgramID;
+// compiles one shader, throws with the compile log on failure
+GLuint static inline compile(GLenum const type, std::string const& source) {
+  auto const shader = glCreateShader(type);
+  char const* src = source.c_str();
+  glShaderSource(shader, 1, &src, nullptr);
+  glCompileShader(shader);
+  GLint ok = GL_FALSE, length = 0;
+  glGetShaderiv(shader, GL_COMPILE_STATUS, &ok);
+  if (ok) return shader;
+  glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &length);
+  std::string log(static_cast<std::size_t>(length > 0 ? length : 1), '\0');
+  glGetShaderInfoLog(shader, length, nullptr, log.data());
+  glDeleteShader(shader);
+  throw std::runtime_error("shader compile failed: " + log);
 }
 
-auto static inline load(std::string const &vfp, std::string const &ffp) {
-  return load(vfp.c_str(), ffp.c_str());
+// links compiled shaders into a program and deletes the shaders, throws with the link log
+GLuint static inline link(std::initializer_list<GLuint> const shaders) {
+  auto const program = glCreateProgram();
+  for (auto const s : shaders) glAttachShader(program, s);
+  glLinkProgram(program);
+  for (auto const s : shaders) {
+    glDetachShader(program, s);
+    glDeleteShader(s);
+  }
+  GLint ok = GL_FALSE, length = 0;
+  glGetProgramiv(program, GL_LINK_STATUS, &ok);
+  if (ok) return program;
+  glGetProgramiv(program, GL_INFO_LOG_LENGTH, &length);
+  std::string log(static_cast<std::size_t>(length > 0 ? length : 1), '\0');
+  glGetProgramInfoLog(program, length, nullptr, log.data());
+  glDeleteProgram(program);
+  throw std::runtime_error("shader link failed: " + log);
+}
+
+// program from vertex and fragment shader sources
+GLuint static inline program(std::string const& vertex, std::string const& fragment) {
+  auto const vs = compile(GL_VERTEX_SHADER, vertex);
+  GLuint fs = 0;
+  try {
+    fs = compile(GL_FRAGMENT_SHADER, fragment);
+  } catch (...) {
+    glDeleteShader(vs);
+    throw;
+  }
+  return link({vs, fs});
+}
+
+// program from vertex and fragment shader files
+GLuint static inline load(std::string const& vertex_file_path,
+                          std::string const& fragment_file_path) {
+  auto const read = [](std::string const& path) {
+    auto const s = file_to_string(path);
+    if (!s) throw std::runtime_error("cannot read shader file: " + path);
+    return *s;
+  };
+  return program(read(vertex_file_path), read(fragment_file_path));
 }
 
 }  // namespace mkn::gl::shaders
 
-#endif  //_MKN_GL_SHADERS_HPP_
+#endif  // _MKN_GL_SHADERS_HPP_
