@@ -18,7 +18,7 @@ jobs:
 
     - run: |
         dnf install -y git wget tar gzip clang gcc-c++ libXcursor-devel libXrandr-devel libXinerama-devel libXi-devel libglvnd-devel
-        curl -Lo mkn https://github.com/mkn/mkn/releases/download/latest/mkn_nix
+        curl -Lo mkn https://github.com/mkn/mkn/releases/latest/download/mkn_nix
         chmod +x mkn
         PATH="$PWD:$PATH" ./mkn.sh
         ./mkn clean build -dtOa -fPIC -p all

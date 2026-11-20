@@ -19,7 +19,7 @@ jobs:
     - run: |
         sudo apt update && sudo apt install -y libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libgl-dev \
           xvfb libgl1-mesa-dri
-        curl -Lo mkn https://github.com/mkn/mkn/releases/download/latest/mkn_nix
+        curl -Lo mkn https://github.com/mkn/mkn/releases/latest/download/mkn_nix
         chmod +x mkn
         PATH="$PWD:$PATH" ./mkn.sh
         ./mkn clean build -dtOa -fPIC -p all
