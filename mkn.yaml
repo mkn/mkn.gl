@@ -1,6 +1,9 @@
 #! clean build -dtOa -fPIC -p all
 
 name: mkn.gl
+property:
+  # dependency versions: master on master, latest on latest (a bare dep is the default branch)
+  mkn.kul.version: master
 parent: all
 
 profile:
@@ -8,7 +11,7 @@ profile:
   inc: inc
 
 - name: all
-  dep: mkn.kul
+  dep: mkn.kul#${mkn.kul.version}
   parent: inc
   if_arg:
     bsd: -DMACOSX
